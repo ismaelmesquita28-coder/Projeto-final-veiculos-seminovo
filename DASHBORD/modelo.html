@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Seminovos</title>
+<style>
+:root { --fundo: #0b1120; --cartao: #151d30; --borda: #24304a; --texto: #e2e8f0; --suave: #8b98b0;
+        --destaque: #f97316; --destaque2: #fb923c; --azul: #38bdf8; --trilho: #1f2a40; }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { font-family: "Segoe UI", Arial, sans-serif; background: radial-gradient(circle at top left, #1a2540, var(--fundo) 60%);
+       color: var(--texto); margin: 0; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+header { display: flex; align-items: center; gap: 12px; }
+header svg { width: 46px; height: 46px; color: var(--destaque); flex: none; }
+h1 { margin: 0; font-size: 20px; letter-spacing: .3px; }
+.sub { color: var(--suave); font-size: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.kpi, .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; }
+.kpi { padding: 10px 14px; display: flex; align-items: center; gap: 12px; border-left: 4px solid var(--destaque); }
+.kpi .icone { font-size: 24px; }
+.kpi span { color: var(--suave); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+.kpi strong { display: block; font-size: 19px; margin-top: 2px; }
+.grade { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1.3fr 1fr;
+         grid-template-rows: 1fr 1fr; gap: 10px; }
+.cartao { padding: 10px 14px; display: flex; flex-direction: column; min-height: 0; }
+#marca { grid-row: span 2; }
+#estado { grid-column: span 2; }
+.topo { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+h2 { margin: 0; font-size: 14px; }
+.pergunta { color: var(--suave); margin: 2px 0 8px; font-size: 12px; }
+.botoes { display: flex; gap: 4px; }
+button { border: 1px solid var(--borda); background: transparent; color: var(--suave); border-radius: 999px;
+         padding: 2px 10px; font-size: 11px; cursor: pointer; }
+button:hover { color: var(--texto); }
+button.ativo { background: var(--destaque); border-color: var(--destaque); color: #fff; }
+.corpo { flex: 1; min-height: 0; position: relative; }
+/* ranking de marcas */
+.ranking { height: 100%; display: flex; flex-direction: column; justify-content: space-around; }
+.linha { display: grid; grid-template-columns: 22px 80px 1fr; align-items: center; gap: 8px; font-size: 13px;
+         cursor: pointer; padding: 2px 4px; border-radius: 6px; }
+.linha:hover { background: #1f2a44; }
+.pos { color: var(--suave); font-size: 11px; text-align: center; }
+.linha:nth-child(-n+3) .pos { color: var(--destaque); font-weight: bold; }
+.trilho { background: var(--trilho); border-radius: 999px; height: 18px; position: relative; overflow: hidden; }
+.barra { background: linear-gradient(90deg, var(--destaque), var(--destaque2)); height: 100%; border-radius: 999px;
+         transition: width .5s; }
+.trilho em { position: absolute; right: 8px; top: 0; line-height: 18px; font-size: 11px; font-style: normal; color: var(--texto); }
+.apagada { opacity: .3; }
+svg.grafico { width: 100%; height: 100%; display: block; overflow: visible; }
+svg text { fill: var(--suave); font-size: 11px; }
+.aviso { color: var(--destaque2); font-size: 11px; margin: 4px 0 0; }
+/* pagamento */
+.rosca { display: flex; align-items: center; gap: 12px; height: 100%; }
+.rosca svg { height: 100%; max-height: 220px; aspect-ratio: 1; flex: none; }
+.legenda { flex: 1; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.legenda div { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; cursor: pointer; }
+.legenda i { width: 10px; height: 10px; border-radius: 3px; }
+.legenda small { color: var(--suave); grid-column: 2 / -1; margin-top: -6px; }
+/* estados */
+.estados { display: grid; grid-template-columns: auto 1fr; gap: 20px; height: 100%; }
+.mapa { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(7, 1fr); gap: 4px;
+        height: 100%; aspect-ratio: 1; }
+.uf { border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px;
+      font-weight: bold; cursor: pointer; transition: transform .15s; color: #fff; }
+.uf:hover { transform: scale(1.12); }
+.top { display: flex; flex-direction: column; justify-content: center; gap: 6px; font-size: 13px; }
+.top h3 { margin: 0 0 4px; font-size: 12px; color: var(--suave); font-weight: normal; }
+.top div { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; }
+.escala { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--suave); margin-top: 8px; }
+.escala b { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #3b2a20, var(--destaque)); }
+#dica { position: fixed; pointer-events: none; background: #f8fafc; color: #0b1120; font-size: 12px; padding: 6px 10px;
+        border-radius: 6px; display: none; line-height: 1.5; z-index: 9; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
+@media (max-width: 900px) {
+  html, body { height: auto; }
+  body { padding: 12px; }
+  header svg { width: 36px; height: 36px; }
+  h1 { font-size: 17px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .kpi { padding: 8px 10px; gap: 8px; }
+  .kpi .icone { font-size: 20px; }
+  .kpi span { font-size: 10px; }
+  .kpi strong { font-size: 15px; overflow-wrap: anywhere; }
+  .grade { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  #marca, #estado { grid-row: auto; grid-column: auto; }
+  .topo { align-items: flex-start; }
+  button { padding: 5px 12px; font-size: 12px; }
+  .linha { grid-template-columns: 22px 72px 1fr; padding: 5px 4px; }
+  #ano .corpo { height: 240px; }
+  .rosca { flex-direction: column; }
+  .rosca svg { width: 100%; max-width: 200px; height: auto; }
+  .legenda { width: 100%; }
+  .estados { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .mapa { height: auto; width: 100%; max-width: 360px; margin: 0 auto; }
+  .uf:hover { transform: none; }
+}
+</style></head><body>
+<header>
+  <svg viewBox="0 0 64 32" fill="currentColor" aria-hidden="true"><path d="M6 22c-2 0-3-1-3-3v-4c0-2 1-3 3-3l8-1 7-6c1-1 3-2 5-2h12c2 0 4 1 5 2l7 6 7 1c2 0 4 2 4 4v3c0 2-1 3-3 3h-3a6 6 0 0 0-12 0H21a6 6 0 0 0-12 0Zm17-12h10V7h-6c-1 0-2 0-3 1Zm13 0h11l-4-3c-1-1-2-1-3-1h-4ZM15 28a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm32 0a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/></svg>
+  <div><h1>Painel de vendas · Veículos seminovos</h1>
+  <div class="sub">Indicadores da camada gold · dados fictícios do Kaggle · passe o mouse ou toque para ver detalhes</div></div>
+</header>
+<div class="kpis" id="kpis"></div>
+<div class="grade">
+  <section class="cartao" id="marca"></section>
+  <section class="cartao" id="ano"></section>
+  <section class="cartao" id="pagamento"></section>
+  <section class="cartao" id="estado"></section>
+</div>
+<div id="dica"></div>
+<script>
+const DADOS = __DADOS__;
+const moeda = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const curta = v => v >= 1e6 ? "R$ " + (v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi"
+                 : v >= 1e3 ? "R$ " + (v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil" : moeda(v);
+const inteiro = v => v.toLocaleString("pt-BR");
+const pct = v => (v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%";
+const METRICAS = { total_vendas: ["Vendas", inteiro, inteiro], faturamento: ["Faturamento", moeda, curta],
+                   ticket_medio: ["Ticket médio", moeda, curta] };
+const CORES = ["#f97316", "#38bdf8", "#a78bfa", "#facc15"];
+const TOTAL = DADOS.marcas.reduce((s, m) => s + m.total_vendas, 0);
+const FATURAMENTO = DADOS.marcas.reduce((s, m) => s + m.faturamento, 0);
+const estado = { marca: { metrica: "faturamento", ordem: "desc", destaque: null },
+                 ano: { metrica: "total_vendas" }, estado: { metrica: "total_vendas" } };
+
+document.getElementById("kpis").innerHTML = [
+  ["🚗", "Veículos vendidos", inteiro(TOTAL)], ["💰", "Faturamento", curta(FATURAMENTO)],
+  ["🏷️", "Ticket médio", moeda(FATURAMENTO / TOTAL)], ["🏆", "Marca líder", DADOS.marcas[0].marca],
+].map(([i, n, v]) => `<div class="kpi"><div class="icone">${i}</div><div><span>${n}</span><strong>${v}</strong></div></div>`).join("");
+
+const dica = document.getElementById("dica");
+function mostrarDica(e, html) {
+  dica.innerHTML = html; dica.style.display = "block";
+  dica.style.left = Math.min(e.clientX + 14, innerWidth - dica.offsetWidth - 8) + "px";
+  dica.style.top = Math.min(e.clientY + 14, innerHeight - dica.offsetHeight - 8) + "px";
+}
+const esconderDica = () => dica.style.display = "none";
+const toque = matchMedia("(hover: none)").matches;
+// No celular não existe mouse: o toque mostra a dica, e tocar fora ou rolar a esconde
+function ligarDica(n, html) {
+  n.onmousemove = e => { if (!toque) mostrarDica(e, html()); };
+  n.onmouseleave = esconderDica;
+  n.addEventListener("click", e => { if (toque) { e.stopPropagation(); mostrarDica(e, html()); } });
+}
+document.addEventListener("click", esconderDica);
+addEventListener("scroll", esconderDica);
+function detalhes(titulo, linha) {
+  return `<b>${titulo}</b><br>` + Object.keys(METRICAS).filter(m => m in linha)
+    .map(m => `${METRICAS[m][0]}: ${METRICAS[m][1](linha[m])}`).join("<br>") +
+    `<br>Participação: ${pct(linha.total_vendas / TOTAL)} das vendas`;
+}
+function cabecalho(titulo, pergunta, metricas, atual, extra = "") {
+  return `<div class="topo"><h2>${titulo}</h2><div class="botoes">${metricas.map(m =>
+    `<button data-metrica="${m}" class="${m === atual ? "ativo" : ""}">${METRICAS[m][0]}</button>`).join("")}${extra}</div></div>
+    <p class="pergunta">${pergunta}</p>`;
+}
+function ligarBotoes(el, s, desenhar) {
+  el.querySelectorAll("[data-metrica]").forEach(b => b.onclick = () => { s.metrica = b.dataset.metrica; desenhar(); });
+}
+
+// Ranking de marcas: barras horizontais
+function desenharMarca() {
+  const el = document.getElementById("marca"), s = estado.marca, m = s.metrica;
+  const linhas = [...DADOS.marcas].sort((a, b) => s.ordem === "desc" ? b[m] - a[m] : a[m] - b[m]);
+  const maior = Math.max(...linhas.map(l => l[m]));
+  el.innerHTML = cabecalho("Ranking de marcas", "Quais marcas vendem e faturam mais?",
+      ["faturamento", "total_vendas", "ticket_medio"], m,
+      `<button data-ordem>${s.ordem === "desc" ? "↓" : "↑"}</button>`) +
+    `<div class="corpo"><div class="ranking">${linhas.map((l, i) =>
+      `<div class="linha ${s.destaque && s.destaque !== l.marca ? "apagada" : ""}" data-id="${l.marca}">
+        <span class="pos">${i + 1}º</span><span>${l.marca}</span>
+        <div class="trilho"><div class="barra" style="width:${l[m] / maior * 100}%"></div><em>${METRICAS[m][2](l[m])}</em></div></div>`
+    ).join("")}</div></div>`;
+  ligarBotoes(el, s, desenharMarca);
+  el.querySelector("[data-ordem]").onclick = () => { s.ordem = s.ordem === "desc" ? "asc" : "desc"; desenharMarca(); };
+  el.querySelectorAll(".linha").forEach(d => {
+    const l = DADOS.marcas.find(x => x.marca === d.dataset.id);
+    ligarDica(d, () => detalhes(l.marca, l));
+    d.onclick = () => { s.destaque = s.destaque === l.marca ? null : l.marca; if (!toque) esconderDica(); desenharMarca(); };
+  });
+}
+
+// Evolução por ano: colunas com linha de tendência
+function desenharAno() {
+  const el = document.getElementById("ano"), s = estado.ano, m = s.metrica;
+  el.innerHTML = cabecalho("Evolução anual", "Como as vendas e o faturamento mudam a cada ano?",
+      ["total_vendas", "faturamento"], m) +
+    `<div class="corpo"></div><p class="aviso">▨ 2017 e 2025 estão incompletos (16/04/2017 a 15/04/2025).</p>`;
+  ligarBotoes(el, s, desenharAno);
+  const corpo = el.querySelector(".corpo");
+  const L = corpo.clientWidth || 400, A = corpo.clientHeight || 200, base = A - 18, topo = 16;
+  const maior = Math.max(...DADOS.anos.map(a => a[m]));
+  const passo = L / DADOS.anos.length, larg = passo * 0.6;
+  const y = v => base - (v / maior) * (base - topo);
+  const pontos = DADOS.anos.map((a, i) => `${i * passo + passo / 2},${y(a[m])}`).join(" ");
+  corpo.innerHTML = `<svg class="grafico" viewBox="0 0 ${L} ${A}">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#f9731633"/></linearGradient>
+    <pattern id="h" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f9731633"/><line y2="6" stroke="#f97316" stroke-width="2"/></pattern></defs>
+    ${DADOS.anos.map((a, i) => {
+      const x = i * passo + (passo - larg) / 2, incompleto = a.ano === 2017 || a.ano === 2025;
+      return `<g data-i="${i}" style="cursor:pointer">
+        <rect x="${i * passo}" y="0" width="${passo}" height="${A}" fill="transparent"/>
+        <rect x="${x}" y="${y(a[m])}" width="${larg}" height="${base - y(a[m])}" rx="4" fill="url(#${incompleto ? "h" : "g"})"/>
+        <text x="${x + larg / 2}" y="${y(a[m]) - 4}" text-anchor="middle" style="fill:#e2e8f0">${METRICAS[m][2](a[m])}</text>
+        <text x="${x + larg / 2}" y="${A - 2}" text-anchor="middle">${a.ano}</text></g>`;
+    }).join("")}
+    <polyline points="${pontos}" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 3" pointer-events="none"/>
+  </svg>`;
+  corpo.querySelectorAll("g[data-i]").forEach(g => {
+    const a = DADOS.anos[g.dataset.i];
+    ligarDica(g, () => detalhes(a.ano, a));
+  });
+}
+
+// Formas de pagamento: rosca
+function desenharPagamento() {
+  const el = document.getElementById("pagamento");
+  el.innerHTML = cabecalho("Formas de pagamento", "Como os clientes pagam e qual é o valor médio?", [], null) +
+    `<div class="corpo"><div class="rosca"></div></div>`;
+  const R = 50, r = 32, C = 2 * Math.PI;
+  let inicio = -Math.PI / 2;
+  const fatias = DADOS.pagamentos.map((p, i) => {
+    const ang = p.total_vendas / TOTAL * C, fim = inicio + ang, grande = ang > Math.PI ? 1 : 0;
+    const pt = (raio, a) => `${60 + raio * Math.cos(a)},${60 + raio * Math.sin(a)}`;
+    const d = `M${pt(R, inicio)} A${R},${R} 0 ${grande} 1 ${pt(R, fim)} L${pt(r, fim)} A${r},${r} 0 ${grande} 0 ${pt(r, inicio)}Z`;
+    inicio = fim;
+    return `<path d="${d}" fill="${CORES[i]}" data-i="${i}" style="cursor:pointer"/>`;
+  }).join("");
+  el.querySelector(".rosca").innerHTML = `<svg viewBox="0 0 120 120">${fatias}
+      <text x="60" y="58" text-anchor="middle" style="fill:#e2e8f0;font-size:14px;font-weight:bold">${inteiro(TOTAL)}</text>
+      <text x="60" y="72" text-anchor="middle" style="font-size:8px">vendas</text></svg>
+    <div class="legenda">${DADOS.pagamentos.map((p, i) =>
+      `<div data-i="${i}"><i style="background:${CORES[i]}"></i><span>${p.forma_pagamento}</span><b>${pct(p.total_vendas / TOTAL)}</b>
+       <small>ticket médio ${moeda(p.ticket_medio)}</small></div>`).join("")}</div>`;
+  el.querySelectorAll("[data-i]").forEach(n => {
+    const p = DADOS.pagamentos[n.dataset.i];
+    ligarDica(n, () => detalhes(p.forma_pagamento, p));
+  });
+}
+
+// Estados: mapa em blocos do Brasil + top 5
+const POSICOES = { RR: [2, 0], AP: [4, 0], AM: [1, 1], PA: [3, 1], MA: [4, 1], CE: [5, 1], RN: [6, 1],
+  AC: [0, 2], RO: [1, 2], MT: [2, 2], TO: [3, 2], PI: [4, 2], PE: [5, 2], PB: [6, 2],
+  GO: [3, 3], BA: [4, 3], SE: [5, 3], AL: [6, 3], MS: [2, 4], DF: [3, 4], MG: [4, 4], ES: [5, 4],
+  PR: [2, 5], SP: [3, 5], RJ: [4, 5], RS: [1, 6], SC: [2, 6] };
+function desenharEstado() {
+  const el = document.getElementById("estado"), s = estado.estado, m = s.metrica;
+  const valores = DADOS.estados.map(e => e[m]), menor = Math.min(...valores), maior = Math.max(...valores);
+  const cor = v => { const t = (v - menor) / (maior - menor || 1);
+    return `rgb(${Math.round(59 + t * 190)},${Math.round(42 + t * 73)},${Math.round(32 - t * 10)})`; };
+  const top = [...DADOS.estados].sort((a, b) => b[m] - a[m]).slice(0, 5);
+  el.innerHTML = cabecalho("Vendas por estado", "Em quais estados estão os clientes que mais compram?",
+      ["total_vendas", "faturamento"], m) +
+    `<div class="corpo"><div class="estados"><div class="mapa">${DADOS.estados.map(e => {
+      const [c, l] = POSICOES[e.estado] || [0, 0];
+      return `<div class="uf" data-id="${e.estado}" style="grid-column:${c + 1};grid-row:${l + 1};background:${cor(e[m])}">${e.estado}</div>`;
+    }).join("")}</div>
+    <div class="top"><h3>Top 5 · ${METRICAS[m][0].toLowerCase()}</h3>${top.map((e, i) =>
+      `<div><b style="color:${i === 0 ? "var(--destaque)" : "inherit"}">${e.estado}</b>
+       <div class="trilho"><div class="barra" style="width:${e[m] / maior * 100}%"></div></div>
+       <span>${METRICAS[m][2](e[m])}</span></div>`).join("")}
+      <div class="escala"><span>${METRICAS[m][2](menor)}</span><b></b><span>${METRICAS[m][2](maior)}</span></div>
+    </div></div></div>`;
+  ligarBotoes(el, s, desenharEstado);
+  el.querySelectorAll(".uf").forEach(n => {
+    const e = DADOS.estados.find(x => x.estado === n.dataset.id);
+    ligarDica(n, () => detalhes(e.estado, e));
+  });
+}
+
+function desenharTudo() { desenharMarca(); desenharAno(); desenharPagamento(); desenharEstado(); }
+desenharTudo();
+addEventListener("resize", desenharAno);
+</script>
+</body></html>

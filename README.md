@@ -40,6 +40,36 @@ O dataset tem um único CSV, então as tabelas relacionadas foram criadas na sil
 | Em quais estados estão os clientes que mais compram? | `gold.vendas_por_estado` | [`sql/gold/vendas_por_estado.sql`](sql/gold/vendas_por_estado.sql) | MG lidera em vendas (439), e PA, em faturamento (R$ 61.445.645,36) |
 | Como os clientes pagam e qual é o valor médio em cada forma? | `gold.formas_pagamento` | [`sql/gold/formas_pagamento.sql`](sql/gold/formas_pagamento.sql) | Consórcio lidera, com 3.786 vendas e média de R$ 141.053,95 |
 
+## Dashboard
+
+**Acesse online:** https://vendas-de-seminovos-brasil.netlify.app
+
+A pasta [`DASHBORD/`](DASHBORD/) tem o dashboard com os indicadores da gold:
+
+- [`DASHBORD/gerar_dashboard.py`](DASHBORD/gerar_dashboard.py) lê as tabelas `gold.*` de `dados/seminovos.duckdb`, em modo só leitura;
+- [`DASHBORD/modelo.html`](DASHBORD/modelo.html) é o layout da página, com o visual e os gráficos;
+- [`DASHBORD/site/index.html`](DASHBORD/site/index.html) é a página gerada, que abre direto no navegador, sem servidor e sem internet. A pasta `site` tem só essa página, para ser publicada (por exemplo, arrastando a pasta para https://app.netlify.com/drop).
+
+A página ocupa uma tela só, com tema escuro, e mostra os totais (veículos vendidos, faturamento, ticket médio e marca líder). Cada indicador usa o gráfico que melhor responde à sua pergunta:
+
+| Indicador | Gráfico |
+|---|---|
+| `gold.faturamento_por_marca` | Ranking de barras horizontais, com posição de cada marca |
+| `gold.vendas_por_ano` | Colunas com linha de tendência; 2017 e 2025 aparecem hachurados, porque estão incompletos |
+| `gold.formas_pagamento` | Rosca com a participação de cada forma e o ticket médio na legenda |
+| `gold.vendas_por_estado` | Mapa do Brasil em blocos, com a cor pela intensidade, e top 5 dos estados |
+
+Ela é interativa: os botões trocam a métrica (vendas, faturamento ou ticket médio), o mouse sobre qualquer item mostra todos os valores e a participação nas vendas, e clicar em uma marca a destaca no ranking.
+
+Para gerar o dashboard, rode o pipeline antes, porque o script lê o banco criado por ele:
+
+```bash
+python src/pipeline.py
+python DASHBORD/gerar_dashboard.py
+```
+
+Depois, abra `DASHBORD/site/index.html` no navegador.
+
 ## Como rodar do zero
 
 É preciso ter Python e Git instalados. Rode os comandos abaixo, nesta ordem:
@@ -50,6 +80,7 @@ cd Projeto-final-veiculos-seminovo
 python -m pip install -r requirements.txt
 python src/pipeline.py
 python -m pytest
+python DASHBORD/gerar_dashboard.py
 ```
 
 Rode tudo na pasta principal do projeto, porque o caminho do CSV parte dela. O banco não precisa ser criado à mão: o pipeline cria o arquivo `dados/seminovos.duckdb` e mostra os indicadores no terminal.
@@ -88,5 +119,6 @@ Usei IA em todas as etapas e conferi os resultados. Estes foram os principais er
 
 1. **Plano com enunciado antigo.** A IA montou o projeto com base em uma versão desatualizada do desafio, uma Mini Loja com menu no terminal, e disse que não podia fazer commit na `main`. Descobri ao reler os requisitos atuais, que pedem um pipeline em três camadas. Por isso, recomecei a partir da `main`.
 2. **Tabelas faltando.** Quando ainda estava no plano antigo, o guia da IA mostrou só 2 das 4 tabelas planejadas, e o arquivo ficou incompleto. Descobri ao conferir o arquivo com as tabelas que deveriam existir.
+3. **Dashboard sem versão mobile e com design desatualizado.** A primeira versão do dashboard só usava barras simples, em 5 colunas estreitas, com espaço sobrando, e não se adaptava ao celular. Descobri ao abrir a página no navegador e no celular. Pedi um novo layout, com um gráfico adequado a cada indicador, e um ajuste para telas pequenas e para o toque.
 
 Para não depender só da IA, conferi as linhas de cada camada a cada etapa e comparei os resultados com o que era esperado. Também testei a falha de propósito para confirmar que os testes pegam erros.
