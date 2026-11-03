@@ -55,6 +55,10 @@ button.ativo { background: var(--destaque); border-color: var(--destaque); color
 #resumo { color: var(--suave); font-size: 12px; }
 svg.grafico { width: 100%; height: 100%; display: block; overflow: visible; }
 svg text { fill: var(--suave); font-size: 11px; }
+svg text.eixo { font-size: 12px; }
+/* Contorno da cor do cartão em volta do número, para ele não se misturar com a linha e as colunas */
+svg text.rotulo { fill: var(--texto); font-size: 13px; font-weight: 600; pointer-events: none;
+                  paint-order: stroke; stroke: var(--cartao); stroke-width: 4px; stroke-linejoin: round; }
 .aviso { color: var(--destaque2); font-size: 11px; margin: 4px 0 0; }
 /* pagamento */
 .rosca { display: flex; align-items: center; gap: 12px; height: 100%; }
@@ -229,7 +233,11 @@ function desenharAno() {
     `<div class="corpo"></div><p class="aviso">▨ 2017 e 2025 estão incompletos (16/04/2017 a 15/04/2025).</p>`;
   ligarBotoes(el, s, desenharAno);
   const corpo = el.querySelector(".corpo");
-  const L = corpo.clientWidth || 400, A = corpo.clientHeight || 200, base = A - 18, topo = 16;
+  const L = corpo.clientWidth || 400, A = corpo.clientHeight || 200, base = A - 20, topo = 24;
+  // Rótulos curtos (sem "R$", que vai no título do eixo) para não se sobreporem às colunas vizinhas
+  const rotulo = v => m === "faturamento"
+    ? (v / 1e6).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : inteiro(v);
+  const unidade = m === "faturamento" ? "R$ milhões" : "veículos vendidos";
   const maior = Math.max(...anos.map(a => a[m])) || 1;
   const passo = L / anos.length, larg = passo * 0.6;
   const y = v => base - (v / maior) * (base - topo);
@@ -242,10 +250,11 @@ function desenharAno() {
       return `<g data-i="${i}" style="cursor:pointer">
         <rect x="${i * passo}" y="0" width="${passo}" height="${A}" fill="transparent"/>
         <rect x="${x}" y="${y(a[m])}" width="${larg}" height="${base - y(a[m])}" rx="4" fill="url(#${incompleto ? "h" : "g"})"/>
-        <text x="${x + larg / 2}" y="${y(a[m]) - 4}" text-anchor="middle" style="fill:#e2e8f0">${METRICAS[m][2](a[m])}</text>
-        <text x="${x + larg / 2}" y="${A - 2}" text-anchor="middle">${a.ano}</text></g>`;
+        <text x="${x + larg / 2}" y="${A - 3}" text-anchor="middle" class="eixo">${a.ano}</text></g>`;
     }).join("")}
-    <polyline points="${pontos}" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 3" pointer-events="none"/>
+    <polyline points="${pontos}" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 3" opacity=".6" pointer-events="none"/>
+    ${anos.map((a, i) => `<text x="${i * passo + passo / 2}" y="${y(a[m]) - 7}" text-anchor="middle" class="rotulo">${rotulo(a[m])}</text>`).join("")}
+    <text x="0" y="10" class="eixo">${unidade}</text>
   </svg>`;
   corpo.querySelectorAll("g[data-i]").forEach(g => {
     const a = anos[g.dataset.i];
