@@ -22,7 +22,11 @@ Os dados são fictícios e foram criados pelo autor do dataset com a biblioteca 
 | `gold.vendas_por_ano` | Um ano | 9 |
 | `gold.vendas_por_estado` | Um estado | 27 |
 | `gold.formas_pagamento` | Uma forma de pagamento | 4 |
-| `gold.vendas_detalhadas` | Uma combinação de marca, estado, ano e forma de pagamento | 5.012 |
+| `gold.painel_totais` | Uma combinação de filtro de marca e de estado | 308 |
+| `gold.painel_marcas` | Uma marca dentro de um filtro de estado | 280 |
+| `gold.painel_estados` | Um estado dentro de um filtro de marca | 297 |
+| `gold.painel_anos` | Um ano dentro de uma combinação de filtros | 2.772 |
+| `gold.painel_pagamentos` | Uma forma de pagamento dentro de uma combinação de filtros | 1.232 |
 
 ## Camadas
 
@@ -40,7 +44,8 @@ O dataset tem um único CSV, então as tabelas relacionadas foram criadas na sil
 | Como as vendas e o faturamento mudam a cada ano? | `gold.vendas_por_ano` | [`sql/gold/vendas_por_ano.sql`](sql/gold/vendas_por_ano.sql) | 2020 tem mais vendas entre os anos completos: 1.419 |
 | Em quais estados estão os clientes que mais compram? | `gold.vendas_por_estado` | [`sql/gold/vendas_por_estado.sql`](sql/gold/vendas_por_estado.sql) | MG lidera em vendas (439), e PA, em faturamento (R$ 61.445.645,36) |
 | Como os clientes pagam e qual é o valor médio em cada forma? | `gold.formas_pagamento` | [`sql/gold/formas_pagamento.sql`](sql/gold/formas_pagamento.sql) | Consórcio lidera, com 3.786 vendas e média de R$ 141.053,95 |
-| Como as vendas se distribuem quando se filtra por marca e por estado? | `gold.vendas_detalhadas` | [`sql/gold/vendas_detalhadas.sql`](sql/gold/vendas_detalhadas.sql) | Alimenta os filtros do dashboard. Exemplo: Toyota em SP tem 83 vendas e R$ 10.834.352,42 |
+
+As tabelas `gold.painel_*` ([`sql/gold/painel_totais.sql`](sql/gold/painel_totais.sql), [`painel_marcas.sql`](sql/gold/painel_marcas.sql), [`painel_estados.sql`](sql/gold/painel_estados.sql), [`painel_anos.sql`](sql/gold/painel_anos.sql) e [`painel_pagamentos.sql`](sql/gold/painel_pagamentos.sql)) respondem às mesmas perguntas para cada filtro de marca e de estado do dashboard. Os valores `Todas` e `Todos` significam "sem filtro", e combinações sem vendas aparecem com zero. Exemplo: Toyota em SP tem 83 vendas, R$ 10.834.352,42 e ticket médio de R$ 130.534,37.
 
 ## Dashboard
 
@@ -48,7 +53,7 @@ O dataset tem um único CSV, então as tabelas relacionadas foram criadas na sil
 
 A pasta [`DASHBORD/`](DASHBORD/) tem o dashboard com os indicadores da gold:
 
-- [`DASHBORD/gerar_dashboard.py`](DASHBORD/gerar_dashboard.py) lê `gold.vendas_detalhadas` de `dados/seminovos.duckdb`, em modo só leitura, e confere se, sem filtro, ela bate com as tabelas gold de marca, estado e ano. Se não bater, o script para com erro;
+- [`DASHBORD/gerar_dashboard.py`](DASHBORD/gerar_dashboard.py) lê as tabelas `gold.painel_*` de `dados/seminovos.duckdb`, em modo só leitura, e confere se, sem filtro, elas batem com as 4 tabelas de indicadores. Se não baterem, o script para com erro;
 - [`DASHBORD/modelo.html`](DASHBORD/modelo.html) é o layout da página, com o visual e os gráficos;
 - [`DASHBORD/site/index.html`](DASHBORD/site/index.html) é a página gerada, que abre direto no navegador, sem servidor e sem internet. A pasta `site` tem só essa página, para ser publicada (por exemplo, arrastando a pasta para https://app.netlify.com/drop).
 
@@ -61,7 +66,7 @@ A página ocupa uma tela só, com tema escuro, e mostra os totais (veículos ven
 | `gold.formas_pagamento` | Rosca com a participação de cada forma e o ticket médio na legenda |
 | `gold.vendas_por_estado` | Mapa do Brasil em blocos, com a cor pela intensidade, e top 5 dos estados |
 
-Ela tem **filtros por marca e por estado**, que podem ser usados juntos. Basta escolher nas listas do topo ou clicar em uma marca do ranking ou em um estado do mapa. Clicar de novo, ou em "Limpar filtros", volta a mostrar todas as vendas. Com um filtro ativo, os totais, a evolução anual e as formas de pagamento mostram só as vendas escolhidas. O ranking e o mapa continuam mostrando todas as opções, com a escolhida em destaque. Por exemplo, ao filtrar a Toyota, o mapa mostra onde a Toyota mais vende.
+Ela tem **filtros por marca e por estado**, que podem ser usados juntos. Basta escolher nas listas do topo ou clicar em uma marca do ranking ou em um estado do mapa. Clicar de novo, ou em "Limpar filtros", volta a mostrar todas as vendas. Os números de cada filtro já vêm prontos das tabelas `gold.painel_*`: a página não faz nenhum cálculo, só escolhe as linhas do filtro e desenha. Com um filtro ativo, os totais, a evolução anual e as formas de pagamento mostram só as vendas escolhidas. O ranking e o mapa continuam mostrando todas as opções, com a escolhida em destaque. Por exemplo, ao filtrar a Toyota, o mapa mostra onde a Toyota mais vende.
 
 Além disso, ela é interativa: os botões trocam a métrica (vendas, faturamento ou ticket médio), e o mouse (ou o toque, no celular) sobre qualquer item mostra todos os valores e a participação nas vendas.
 
@@ -92,7 +97,7 @@ Rode tudo na pasta principal do projeto, porque o caminho do CSV parte dela. O b
 O resultado esperado é:
 
 - as contagens da tabela "O que é uma linha de cada tabela";
-- `4 passed` nos testes.
+- `5 passed` nos testes.
 
 ## Testes
 
@@ -101,9 +106,10 @@ Os testes ficam em `tests/teste_test.py`. Eles rodam os arquivos `.sql` do proje
 - `Volskwagen` é corrigido e o modelo não fica duplicado;
 - nenhuma venda se perde na silver;
 - a venda com ano anterior ao de fabricação é marcada;
-- o faturamento por marca soma as vendas corretamente.
+- o faturamento por marca soma as vendas corretamente;
+- os totais do painel respeitam os filtros de marca e de estado.
 
-Para confirmar que os testes pegam erros, retirei de propósito a correção da marca em `sql/silver/modelos.sql`. O resultado foi `1 failed, 3 passed`, porque apareceu um modelo a mais com `Volskwagen`. Depois, restaurei o arquivo e os testes voltaram a `4 passed`.
+Para confirmar que os testes pegam erros, retirei de propósito a correção da marca em `sql/silver/modelos.sql`. O resultado foi `1 failed, 3 passed`, porque apareceu um modelo a mais com `Volskwagen`. Depois, restaurei o arquivo e os testes voltaram a `4 passed`. Depois, entrou o teste do painel, e hoje o resultado é `5 passed`.
 
 ## Decisões sobre o dado
 
@@ -124,5 +130,6 @@ Usei IA em todas as etapas e conferi os resultados. Estes foram os principais er
 1. **Plano com enunciado antigo.** A IA montou o projeto com base em uma versão desatualizada do desafio, uma Mini Loja com menu no terminal, e disse que não podia fazer commit na `main`. Descobri ao reler os requisitos atuais, que pedem um pipeline em três camadas. Por isso, recomecei a partir da `main`.
 2. **Tabelas faltando.** Quando ainda estava no plano antigo, o guia da IA mostrou só 2 das 4 tabelas planejadas, e o arquivo ficou incompleto. Descobri ao conferir o arquivo com as tabelas que deveriam existir.
 3. **Dashboard sem versão mobile e com design desatualizado.** A primeira versão do dashboard só usava barras simples, em 5 colunas estreitas, com espaço sobrando, e não se adaptava ao celular. Descobri ao abrir a página no navegador e no celular. Pedi um novo layout, com um gráfico adequado a cada indicador, e um ajuste para telas pequenas e para o toque.
+4. **Dashboard calculando na tela.** Para criar os filtros por marca e por estado, a IA fez a página somar as vendas, calcular o ticket médio, a participação e o líder no navegador. Os requisitos pedem que o dashboard só leia a camada de indicadores, sem nenhum cálculo na tela. Descobri ao conferir o projeto item por item com o guia de requisitos. Por isso, os cálculos foram para as tabelas `gold.painel_*`, em SQL, e a página passou só a escolher as linhas do filtro e desenhar. Conferi que Toyota em SP dá 83 vendas tanto na gold quanto direto na silver.
 
 Para não depender só da IA, conferi as linhas de cada camada a cada etapa e comparei os resultados com o que era esperado. Também testei a falha de propósito para confirmar que os testes pegam erros.
