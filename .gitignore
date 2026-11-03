@@ -1,0 +1,3 @@
+dados/*.duckdb
+__pycache__/
+.pytest_cache/
