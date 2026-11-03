@@ -8,7 +8,7 @@ PASTA_SQL = RAIZ / "sql"
 
 CAMADAS = {
     "bronze": ["vendas"],
-    "silver": ["clientes", "modelos"],
+    "silver": ["clientes", "modelos", "vendas"],
 }
 
 
@@ -21,6 +21,11 @@ def rodar_tabela(conexao, camada, tabela):
     conexao.execute(arquivo.read_text(encoding="utf-8"))
     print(f"{camada}.{tabela}: {contar_linhas(conexao, f'{camada}.{tabela}')} linhas")
 
+def conferir_vendas(conexao):
+    bronze = contar_linhas(conexao, "bronze.vendas")
+    silver = contar_linhas(conexao, "silver.vendas")
+    if bronze != silver:
+        raise ValueError(f"Bronze tem {bronze} vendas, mas a silver tem {silver}.")
 
 def main():
     conexao = duckdb.connect(str(BANCO))
@@ -31,8 +36,9 @@ def main():
             if camada == "gold":
                 print(conexao.execute(f"SELECT * FROM gold.{tabela}").df().to_string(index=False))
                 print()
+        if camada == "silver":
+            conferir_vendas(conexao)
     conexao.close()
-
 
 if __name__ == "__main__":
     main()
