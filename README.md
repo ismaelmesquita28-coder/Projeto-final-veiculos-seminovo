@@ -22,6 +22,7 @@ Os dados são fictícios e foram criados pelo autor do dataset com a biblioteca 
 | `gold.vendas_por_ano` | Um ano | 9 |
 | `gold.vendas_por_estado` | Um estado | 27 |
 | `gold.formas_pagamento` | Uma forma de pagamento | 4 |
+| `gold.vendas_detalhadas` | Uma combinação de marca, estado, ano e forma de pagamento | 5.012 |
 
 ## Camadas
 
@@ -39,6 +40,7 @@ O dataset tem um único CSV, então as tabelas relacionadas foram criadas na sil
 | Como as vendas e o faturamento mudam a cada ano? | `gold.vendas_por_ano` | [`sql/gold/vendas_por_ano.sql`](sql/gold/vendas_por_ano.sql) | 2020 tem mais vendas entre os anos completos: 1.419 |
 | Em quais estados estão os clientes que mais compram? | `gold.vendas_por_estado` | [`sql/gold/vendas_por_estado.sql`](sql/gold/vendas_por_estado.sql) | MG lidera em vendas (439), e PA, em faturamento (R$ 61.445.645,36) |
 | Como os clientes pagam e qual é o valor médio em cada forma? | `gold.formas_pagamento` | [`sql/gold/formas_pagamento.sql`](sql/gold/formas_pagamento.sql) | Consórcio lidera, com 3.786 vendas e média de R$ 141.053,95 |
+| Como as vendas se distribuem quando se filtra por marca e por estado? | `gold.vendas_detalhadas` | [`sql/gold/vendas_detalhadas.sql`](sql/gold/vendas_detalhadas.sql) | Alimenta os filtros do dashboard. Exemplo: Toyota em SP tem 83 vendas e R$ 10.834.352,42 |
 
 ## Dashboard
 
@@ -46,7 +48,7 @@ O dataset tem um único CSV, então as tabelas relacionadas foram criadas na sil
 
 A pasta [`DASHBORD/`](DASHBORD/) tem o dashboard com os indicadores da gold:
 
-- [`DASHBORD/gerar_dashboard.py`](DASHBORD/gerar_dashboard.py) lê as tabelas `gold.*` de `dados/seminovos.duckdb`, em modo só leitura;
+- [`DASHBORD/gerar_dashboard.py`](DASHBORD/gerar_dashboard.py) lê `gold.vendas_detalhadas` de `dados/seminovos.duckdb`, em modo só leitura, e confere se, sem filtro, ela bate com as tabelas gold de marca, estado e ano. Se não bater, o script para com erro;
 - [`DASHBORD/modelo.html`](DASHBORD/modelo.html) é o layout da página, com o visual e os gráficos;
 - [`DASHBORD/site/index.html`](DASHBORD/site/index.html) é a página gerada, que abre direto no navegador, sem servidor e sem internet. A pasta `site` tem só essa página, para ser publicada (por exemplo, arrastando a pasta para https://app.netlify.com/drop).
 
@@ -59,7 +61,9 @@ A página ocupa uma tela só, com tema escuro, e mostra os totais (veículos ven
 | `gold.formas_pagamento` | Rosca com a participação de cada forma e o ticket médio na legenda |
 | `gold.vendas_por_estado` | Mapa do Brasil em blocos, com a cor pela intensidade, e top 5 dos estados |
 
-Ela é interativa: os botões trocam a métrica (vendas, faturamento ou ticket médio), o mouse sobre qualquer item mostra todos os valores e a participação nas vendas, e clicar em uma marca a destaca no ranking.
+Ela tem **filtros por marca e por estado**, que podem ser usados juntos. Basta escolher nas listas do topo ou clicar em uma marca do ranking ou em um estado do mapa. Clicar de novo, ou em "Limpar filtros", volta a mostrar todas as vendas. Com um filtro ativo, os totais, a evolução anual e as formas de pagamento mostram só as vendas escolhidas. O ranking e o mapa continuam mostrando todas as opções, com a escolhida em destaque. Por exemplo, ao filtrar a Toyota, o mapa mostra onde a Toyota mais vende.
+
+Além disso, ela é interativa: os botões trocam a métrica (vendas, faturamento ou ticket médio), e o mouse (ou o toque, no celular) sobre qualquer item mostra todos os valores e a participação nas vendas.
 
 Para gerar o dashboard, rode o pipeline antes, porque o script lê o banco criado por ele:
 

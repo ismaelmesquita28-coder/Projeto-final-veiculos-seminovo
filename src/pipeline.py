@@ -9,7 +9,7 @@ PASTA_SQL = RAIZ / "sql"
 CAMADAS = {
     "bronze": ["vendas"],
     "silver": ["clientes", "modelos", "vendas"],
-    "gold": ["faturamento_por_marca", "vendas_por_ano", "vendas_por_estado", "formas_pagamento"],
+    "gold": ["faturamento_por_marca", "vendas_por_ano", "vendas_por_estado", "formas_pagamento", "vendas_detalhadas"],
 }
 
 
@@ -35,7 +35,7 @@ def main():
         for tabela in tabelas:
             rodar_tabela(conexao, camada, tabela)
             if camada == "gold":
-                print(conexao.execute(f"SELECT * FROM gold.{tabela}").df().to_string(index=False))
+                print(conexao.execute(f"SELECT * FROM gold.{tabela} LIMIT 30").df().to_string(index=False))
                 print()
         if camada == "silver":
             conferir_vendas(conexao)
