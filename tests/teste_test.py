@@ -45,3 +45,15 @@ def test_faturamento_por_marca_soma_as_vendas(conexao):
     conexao.execute((PASTA_SQL / "gold" / "faturamento_por_marca.sql").read_text(encoding="utf-8"))
     linha = conexao.execute("SELECT marca, total_vendas, faturamento FROM gold.faturamento_por_marca").fetchone()
     assert linha[0] == "Volkswagen" and linha[1] == 2 and float(linha[2]) == 120000.0
+
+def test_painel_totais_respeita_os_filtros(conexao):
+    conexao.execute((PASTA_SQL / "gold" / "painel_totais.sql").read_text(encoding="utf-8"))
+    totais = {
+        (marca, estado): (vendas, float(faturamento), lider)
+        for marca, estado, vendas, faturamento, lider in conexao.execute(
+            "SELECT filtro_marca, filtro_estado, total_vendas, faturamento, estado_lider FROM gold.painel_totais"
+        ).fetchall()
+    }
+    assert totais[("Todas", "Todos")][:2] == (2, 120000.0)
+    assert totais[("Volkswagen", "SP")] == (1, 50000.0, "SP")
+    assert totais[("Volkswagen", "PE")] == (1, 70000.0, "PE")
