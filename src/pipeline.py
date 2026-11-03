@@ -8,6 +8,7 @@ PASTA_SQL = RAIZ / "sql"
 
 CAMADAS = {
     "bronze": ["vendas"],
+    "silver": ["clientes", "modelos"],
 }
 
 
