@@ -1,3 +1,5 @@
+-- Pergunta: como os clientes pagam e qual e o valor medio em cada forma?
+
 CREATE OR REPLACE TABLE gold.formas_pagamento AS
 SELECT
     forma_pagamento,

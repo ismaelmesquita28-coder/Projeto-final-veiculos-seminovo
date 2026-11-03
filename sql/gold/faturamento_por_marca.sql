@@ -1,3 +1,5 @@
+-- Pergunta: quais marcas vendem e faturam mais?
+
 CREATE OR REPLACE TABLE gold.faturamento_por_marca AS
 SELECT
     m.marca,

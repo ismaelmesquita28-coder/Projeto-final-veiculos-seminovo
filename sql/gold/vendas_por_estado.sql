@@ -1,3 +1,5 @@
+-- Pergunta: em quais estados estao os clientes que mais compram?
+
 CREATE OR REPLACE TABLE gold.vendas_por_estado AS
 SELECT
     c.estado,
