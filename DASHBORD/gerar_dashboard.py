@@ -6,30 +6,40 @@ import duckdb
 RAIZ = Path(__file__).resolve().parent.parent
 BANCO = RAIZ / "dados" / "seminovos.duckdb"
 SAIDA = Path(__file__).resolve().parent / "site" / "index.html"
+TABELAS = ["painel_totais", "painel_marcas", "painel_estados", "painel_anos", "painel_pagamentos"]
 
 
-def conferir(conexao, detalhe):
-    # O dashboard recalcula os indicadores a partir de gold.vendas_detalhadas.
-    # Sem filtro, eles precisam bater com as tabelas gold de cada indicador.
-    for tabela, posicao in [("faturamento_por_marca", 0), ("vendas_por_estado", 1), ("vendas_por_ano", 2)]:
-        esperado = {linha[0]: linha[1] for linha in conexao.execute(f"SELECT * FROM gold.{tabela}").fetchall()}
-        calculado = {}
-        for linha in detalhe:
-            calculado[linha[posicao]] = calculado.get(linha[posicao], 0) + linha[4]
-        if calculado != esperado:
-            raise ValueError(f"gold.vendas_detalhadas nao bate com gold.{tabela}")
+def ler(conexao, tabela):
+    resultado = conexao.execute(f"SELECT * FROM gold.{tabela}")
+    colunas = [coluna[0] for coluna in resultado.description]
+    return [dict(zip(colunas, (v if v is None or isinstance(v, str) else float(v) for v in linha)))
+            for linha in resultado.fetchall()]
+
+
+def conferir(conexao):
+    # Sem filtro, as tabelas do painel precisam bater com as tabelas gold de cada indicador.
+    comparacoes = {
+        "painel_marcas": ("faturamento_por_marca", "marca", "filtro_estado = 'Todos'"),
+        "painel_estados": ("vendas_por_estado", "estado", "filtro_marca = 'Todas'"),
+        "painel_anos": ("vendas_por_ano", "ano", "filtro_marca = 'Todas' AND filtro_estado = 'Todos'"),
+        "painel_pagamentos": ("formas_pagamento", "forma_pagamento", "filtro_marca = 'Todas' AND filtro_estado = 'Todos'"),
+    }
+    for painel, (indicador, chave, sem_filtro) in comparacoes.items():
+        diferentes = conexao.execute(f"""
+            SELECT COUNT(*) FROM gold.{indicador} AS i
+            FULL JOIN (SELECT * FROM gold.{painel} WHERE {sem_filtro}) AS p USING ({chave})
+            WHERE p.total_vendas IS DISTINCT FROM i.total_vendas
+        """).fetchone()[0]
+        if diferentes:
+            raise ValueError(f"gold.{painel} nao bate com gold.{indicador}")
 
 
 def main():
     if not BANCO.exists():
         raise FileNotFoundError("Rode antes: python src/pipeline.py")
     conexao = duckdb.connect(str(BANCO), read_only=True)
-    detalhe = conexao.execute("SELECT * FROM gold.vendas_detalhadas").fetchall()
-    conferir(conexao, detalhe)
-    dados = {
-        "colunas": ["marca", "estado", "ano", "forma_pagamento", "total_vendas", "faturamento"],
-        "linhas": [[marca, estado, ano, forma, vendas, float(fat)] for marca, estado, ano, forma, vendas, fat in detalhe],
-    }
+    conferir(conexao)
+    dados = {tabela.removeprefix("painel_"): ler(conexao, tabela) for tabela in TABELAS}
     conexao.close()
     html = MODELO.replace("__DADOS__", json.dumps(dados, ensure_ascii=False, separators=(",", ":")))
     SAIDA.parent.mkdir(exist_ok=True)

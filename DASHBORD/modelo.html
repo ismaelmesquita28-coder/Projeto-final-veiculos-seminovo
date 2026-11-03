@@ -124,8 +124,9 @@ svg text { fill: var(--suave); font-size: 11px; }
 </div>
 <div id="dica"></div>
 <script>
+// Todos os números vêm prontos das tabelas gold.painel_*. A página só escolhe as linhas
+// do filtro ativo e desenha: nenhum total, média ou participação é calculado aqui.
 const DADOS = __DADOS__;
-const LINHAS = DADOS.linhas.map(l => Object.fromEntries(DADOS.colunas.map((c, i) => [c, l[i]])));
 const moeda = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const curta = v => v >= 1e6 ? "R$ " + (v / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mi"
                  : v >= 1e3 ? "R$ " + (v / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + " mil" : moeda(v);
@@ -133,25 +134,13 @@ const inteiro = v => v.toLocaleString("pt-BR");
 const pct = v => (v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%";
 const METRICAS = { total_vendas: ["Vendas", inteiro, inteiro], faturamento: ["Faturamento", moeda, curta],
                    ticket_medio: ["Ticket médio", moeda, curta] };
-const CORES = ["#f97316", "#38bdf8", "#a78bfa", "#facc15"];
-const unicos = c => [...new Set(LINHAS.map(l => l[c]))].sort((a, b) => a < b ? -1 : 1);
-const MARCAS = unicos("marca"), ESTADOS = unicos("estado"), ANOS = unicos("ano"), FORMAS = unicos("forma_pagamento");
+const CORES = { "Consórcio": "#f97316", "Financiamento": "#38bdf8", "À vista": "#a78bfa", "Leasing": "#facc15" };
+const MARCAS = DADOS.marcas.filter(l => l.filtro_estado === "Todos").map(l => l.marca).sort();
+const ESTADOS = DADOS.estados.filter(l => l.filtro_marca === "Todas").map(l => l.estado).sort();
 const estado = { marca: { metrica: "faturamento", ordem: "desc" }, ano: { metrica: "total_vendas" },
                  estado: { metrica: "total_vendas" } };
 const filtro = { marca: null, estado: null };
-let TOTAL = 0;
-
-// Soma as vendas aplicando os filtros. O ranking de marcas ignora o filtro de marca, e o mapa ignora
-// o de estado, para continuarem mostrando todas as opções com a escolhida em destaque.
-function agrupar(chave, todos, ignorar = chave) {
-  const grupos = Object.fromEntries(todos.map(k => [k, { [chave]: k, total_vendas: 0, faturamento: 0 }]));
-  LINHAS.forEach(l => {
-    if (filtro.marca && ignorar !== "marca" && l.marca !== filtro.marca) return;
-    if (filtro.estado && ignorar !== "estado" && l.estado !== filtro.estado) return;
-    const g = grupos[l[chave]]; g.total_vendas += l.total_vendas; g.faturamento += l.faturamento;
-  });
-  return todos.map(k => { const g = grupos[k]; g.ticket_medio = g.total_vendas ? g.faturamento / g.total_vendas : 0; return g; });
-}
+const fMarca = () => filtro.marca || "Todas", fEstado = () => filtro.estado || "Todos";
 
 // Filtros
 const selMarca = document.getElementById("filtro-marca"), selEstado = document.getElementById("filtro-estado");
@@ -166,21 +155,17 @@ function filtrar(dimensao, valor, fixo = false) {
 }
 
 function desenharKpis() {
-  const formas = agrupar("forma_pagamento", FORMAS, null);
-  const vendas = formas.reduce((s, x) => s + x.total_vendas, 0), fat = formas.reduce((s, x) => s + x.faturamento, 0);
-  TOTAL = vendas;
-  const lider = filtro.marca
-    ? ["📍", "Estado líder", agrupar("estado", ESTADOS, null).sort((a, b) => b.total_vendas - a.total_vendas)[0].estado]
-    : ["🏆", "Marca líder", agrupar("marca", MARCAS, null).sort((a, b) => b.faturamento - a.faturamento)[0].marca];
-  if (!vendas) lider[2] = "-";
+  const t = DADOS.totais.find(l => l.filtro_marca === fMarca() && l.filtro_estado === fEstado());
+  const lider = filtro.marca ? ["📍", "Estado líder", t.estado_lider] : ["🏆", "Marca líder", t.marca_lider];
   document.getElementById("kpis").innerHTML = [
-    ["🚗", "Veículos vendidos", inteiro(vendas)], ["💰", "Faturamento", curta(fat)],
-    ["🏷️", "Ticket médio", vendas ? moeda(fat / vendas) : "-"], lider,
+    ["🚗", "Veículos vendidos", inteiro(t.total_vendas)], ["💰", "Faturamento", curta(t.faturamento)],
+    ["🏷️", "Ticket médio", t.total_vendas ? moeda(t.ticket_medio) : "-"], [lider[0], lider[1], lider[2] || "-"],
   ].map(([i, n, v]) => `<div class="kpi"><div class="icone">${i}</div><div><span>${n}</span><strong>${v}</strong></div></div>`).join("");
   selMarca.value = filtro.marca || ""; selEstado.value = filtro.estado || "";
   const partes = [filtro.marca, filtro.estado].filter(Boolean);
   document.getElementById("resumo").textContent = partes.length ? `Mostrando: ${partes.join(" · ")}` : "Mostrando: todas as vendas";
   document.getElementById("limpar").hidden = !partes.length;
+  return t;
 }
 
 const dica = document.getElementById("dica");
@@ -199,10 +184,9 @@ function ligarDica(n, html) {
 }
 document.addEventListener("click", esconderDica);
 addEventListener("scroll", esconderDica);
-function detalhes(titulo, linha, total = TOTAL) {
-  return `<b>${titulo}</b><br>` + Object.keys(METRICAS).filter(m => m in linha)
-    .map(m => `${METRICAS[m][0]}: ${METRICAS[m][1](linha[m])}`).join("<br>") +
-    (total ? `<br>Participação: ${pct(linha.total_vendas / total)} das vendas` : "");
+function detalhes(titulo, linha) {
+  return `<b>${titulo}</b><br>` + Object.keys(METRICAS).map(m => `${METRICAS[m][0]}: ${METRICAS[m][1](linha[m])}`).join("<br>") +
+    (linha.participacao !== null ? `<br>Participação: ${pct(linha.participacao)} das vendas` : "");
 }
 function cabecalho(titulo, pergunta, metricas, atual, extra = "") {
   return `<div class="topo"><h2>${titulo}</h2><div class="botoes">${metricas.map(m =>
@@ -213,11 +197,11 @@ function ligarBotoes(el, s, desenhar) {
   el.querySelectorAll("[data-metrica]").forEach(b => b.onclick = () => { s.metrica = b.dataset.metrica; desenhar(); });
 }
 
-// Ranking de marcas: barras horizontais. Clicar em uma marca filtra o painel.
+// Ranking de marcas: lê gold.painel_marcas. Clicar em uma marca filtra o painel.
 function desenharMarca() {
   const el = document.getElementById("marca"), s = estado.marca, m = s.metrica;
-  const linhas = agrupar("marca", MARCAS), total = linhas.reduce((a, x) => a + x.total_vendas, 0);
-  linhas.sort((a, b) => s.ordem === "desc" ? b[m] - a[m] : a[m] - b[m]);
+  const linhas = DADOS.marcas.filter(l => l.filtro_estado === fEstado())
+    .sort((a, b) => s.ordem === "desc" ? b[m] - a[m] : a[m] - b[m]);
   const maior = Math.max(...linhas.map(l => l[m])) || 1;
   const pergunta = filtro.estado ? `Quais marcas vendem e faturam mais em ${filtro.estado}?` : "Quais marcas vendem e faturam mais?";
   el.innerHTML = cabecalho("Ranking de marcas", pergunta, ["faturamento", "total_vendas", "ticket_medio"], m,
@@ -231,15 +215,15 @@ function desenharMarca() {
   el.querySelector("[data-ordem]").onclick = () => { s.ordem = s.ordem === "desc" ? "asc" : "desc"; desenharMarca(); };
   el.querySelectorAll(".linha").forEach(d => {
     const l = linhas.find(x => x.marca === d.dataset.id);
-    ligarDica(d, () => detalhes(l.marca, l, total) + "<br><i>Clique para filtrar</i>");
+    ligarDica(d, () => detalhes(l.marca, l) + "<br><i>Clique para filtrar</i>");
     d.addEventListener("click", () => filtrar("marca", l.marca));
   });
 }
 
-// Evolução por ano: colunas com linha de tendência
+// Evolução por ano: lê gold.painel_anos e desenha colunas com linha de tendência
 function desenharAno() {
   const el = document.getElementById("ano"), s = estado.ano, m = s.metrica;
-  const anos = agrupar("ano", ANOS, null);
+  const anos = DADOS.anos.filter(l => l.filtro_marca === fMarca() && l.filtro_estado === fEstado());
   el.innerHTML = cabecalho("Evolução anual", "Como as vendas e o faturamento mudam a cada ano?",
       ["total_vendas", "faturamento"], m) +
     `<div class="corpo"></div><p class="aviso">▨ 2017 e 2025 estão incompletos (16/04/2017 a 15/04/2025).</p>`;
@@ -269,29 +253,28 @@ function desenharAno() {
   });
 }
 
-// Formas de pagamento: rosca
-function desenharPagamento() {
+// Formas de pagamento: lê gold.painel_pagamentos e desenha uma rosca com a participação de cada forma
+function desenharPagamento(totais) {
   const el = document.getElementById("pagamento");
-  const formas = agrupar("forma_pagamento", FORMAS, null).sort((a, b) => b.total_vendas - a.total_vendas);
-  const corDe = p => CORES[FORMAS.indexOf(p.forma_pagamento)];
+  const formas = DADOS.pagamentos.filter(l => l.filtro_marca === fMarca() && l.filtro_estado === fEstado());
   el.innerHTML = cabecalho("Formas de pagamento", "Como os clientes pagam e qual é o valor médio?", [], null) +
     `<div class="corpo"><div class="rosca"></div></div>`;
   const R = 50, r = 32, C = 2 * Math.PI;
   let inicio = -Math.PI / 2;
   // Um arco SVG não fecha um círculo inteiro, então uma fatia de 100% fica um fio menor
-  const fatias = TOTAL ? formas.map((p, i) => {
-    const ang = Math.min(p.total_vendas / TOTAL * C, C - 1e-4), fim = inicio + ang, grande = ang > Math.PI ? 1 : 0;
+  const fatias = totais.total_vendas ? formas.map((p, i) => {
+    const ang = Math.min(p.participacao * C, C - 1e-4), fim = inicio + ang, grande = ang > Math.PI ? 1 : 0;
     const pt = (raio, a) => `${60 + raio * Math.cos(a)},${60 + raio * Math.sin(a)}`;
     const d = `M${pt(R, inicio)} A${R},${R} 0 ${grande} 1 ${pt(R, fim)} L${pt(r, fim)} A${r},${r} 0 ${grande} 0 ${pt(r, inicio)}Z`;
     inicio = fim;
-    return `<path d="${d}" fill="${corDe(p)}" data-i="${i}" style="cursor:pointer"/>`;
+    return `<path d="${d}" fill="${CORES[p.forma_pagamento]}" data-i="${i}" style="cursor:pointer"/>`;
   }).join("") : `<circle cx="60" cy="60" r="41" fill="none" stroke="#1f2a40" stroke-width="18"/>`;
   el.querySelector(".rosca").innerHTML = `<svg viewBox="0 0 120 120">${fatias}
-      <text x="60" y="58" text-anchor="middle" style="fill:#e2e8f0;font-size:14px;font-weight:bold">${inteiro(TOTAL)}</text>
+      <text x="60" y="58" text-anchor="middle" style="fill:#e2e8f0;font-size:14px;font-weight:bold">${inteiro(totais.total_vendas)}</text>
       <text x="60" y="72" text-anchor="middle" style="font-size:8px">vendas</text></svg>
     <div class="legenda">${formas.map((p, i) =>
-      `<div data-i="${i}"><i style="background:${corDe(p)}"></i><span>${p.forma_pagamento}</span>
-       <b>${TOTAL ? pct(p.total_vendas / TOTAL) : "-"}</b>
+      `<div data-i="${i}"><i style="background:${CORES[p.forma_pagamento]}"></i><span>${p.forma_pagamento}</span>
+       <b>${p.participacao !== null ? pct(p.participacao) : "-"}</b>
        <small>ticket médio ${p.total_vendas ? moeda(p.ticket_medio) : "-"}</small></div>`).join("")}</div>`;
   el.querySelectorAll("[data-i]").forEach(n => {
     const p = formas[n.dataset.i];
@@ -299,14 +282,14 @@ function desenharPagamento() {
   });
 }
 
-// Estados: mapa em blocos do Brasil + top 5. Clicar em um estado filtra o painel.
+// Estados: lê gold.painel_estados e desenha um mapa em blocos + top 5. Clicar em um estado filtra o painel.
 const POSICOES = { RR: [2, 0], AP: [4, 0], AM: [1, 1], PA: [3, 1], MA: [4, 1], CE: [5, 1], RN: [6, 1],
   AC: [0, 2], RO: [1, 2], MT: [2, 2], TO: [3, 2], PI: [4, 2], PE: [5, 2], PB: [6, 2],
   GO: [3, 3], BA: [4, 3], SE: [5, 3], AL: [6, 3], MS: [2, 4], DF: [3, 4], MG: [4, 4], ES: [5, 4],
   PR: [2, 5], SP: [3, 5], RJ: [4, 5], RS: [1, 6], SC: [2, 6] };
 function desenharEstado() {
   const el = document.getElementById("estado"), s = estado.estado, m = s.metrica;
-  const estados = agrupar("estado", ESTADOS), total = estados.reduce((a, x) => a + x.total_vendas, 0);
+  const estados = DADOS.estados.filter(l => l.filtro_marca === fMarca());
   const valores = estados.map(e => e[m]), menor = Math.min(...valores), maior = Math.max(...valores);
   const cor = v => { const t = (v - menor) / (maior - menor || 1);
     return `rgb(${Math.round(59 + t * 190)},${Math.round(42 + t * 73)},${Math.round(32 - t * 10)})`; };
@@ -327,12 +310,12 @@ function desenharEstado() {
   ligarBotoes(el, s, desenharEstado);
   el.querySelectorAll(".uf").forEach(n => {
     const e = estados.find(x => x.estado === n.dataset.id);
-    ligarDica(n, () => detalhes(e.estado, e, total) + "<br><i>Clique para filtrar</i>");
+    ligarDica(n, () => detalhes(e.estado, e) + "<br><i>Clique para filtrar</i>");
     n.addEventListener("click", () => filtrar("estado", e.estado));
   });
 }
 
-function desenharTudo() { desenharKpis(); desenharMarca(); desenharAno(); desenharPagamento(); desenharEstado(); }
+function desenharTudo() { const totais = desenharKpis(); desenharMarca(); desenharAno(); desenharPagamento(totais); desenharEstado(); }
 desenharTudo();
 addEventListener("resize", desenharAno);
 </script>
