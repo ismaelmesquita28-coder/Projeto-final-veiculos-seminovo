@@ -76,8 +76,10 @@ svg text.rotulo { fill: var(--texto); font-size: 13px; font-weight: 600; pointer
 .uf:hover { transform: scale(1.12); }
 .top { display: flex; flex-direction: column; justify-content: center; gap: 6px; font-size: 13px; }
 .top h3 { margin: 0 0 4px; font-size: 12px; color: var(--suave); font-weight: normal; }
-.top div { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; align-items: center; }
-.escala { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--suave); margin-top: 8px; }
+/* Só as linhas do top 5 (filhos diretos), não a barra nem a escala, que também são div */
+.top > div:not(.escala) { display: grid; grid-template-columns: 30px 1fr 90px; gap: 8px; align-items: center; }
+.top > div:not(.escala) span { text-align: right; }
+.escala { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 11px; color: var(--suave); margin-top: 8px; }
 .escala b { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #3b2a20, var(--destaque)); }
 #dica { position: fixed; pointer-events: none; background: #f8fafc; color: #0b1120; font-size: 12px; padding: 6px 10px;
         border-radius: 6px; display: none; line-height: 1.5; z-index: 9; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
